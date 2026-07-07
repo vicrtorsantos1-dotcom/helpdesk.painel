@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Helpdesk - Identificação</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f9; margin: 0; padding: 15px; display: flex; justify-content: center; }
+        .helpdesk-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h2 { margin-top: 0; color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px; font-size: 22px; }
+        label { display: block; margin: 16px 0 6px; font-weight: bold; color: #555; font-size: 14px; }
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        input:disabled { background-color: #e9ecef; color: #6c757d; }
+        button { width: 100%; background-color: #0056b3; color: white; border: none; padding: 14px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 25px; -webkit-appearance: none; }
+        button:hover { background-color: #003d82; }
+        .oculto { display: none; }
+        .loading { color: #0056b3; font-weight: bold; margin-top: 10px; display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="helpdesk-card">
+        <h2>Suporte Técnico</h2>
+        
+        <!-- PASSO 1: TELA DE IDENTIFICAÇÃO -->
+        <div id="bloco-identificacao">
+            <label for="identificacao">Digite seu CPF ou Matrícula:</label>
+            <input type="text" id="identificacao" placeholder="Apenas números">
+            <div id="status-busca" class="loading">Buscando cadastro...</div>
+            <button type="button" onclick="buscarUsuario()">Acessar Formulário</button>
+        </div>
+
+        <!-- PASSO 2: FORMULÁRIO DE CHAMADO (INICIA OCULTO) -->
+        <form id="meuFormulario" class="oculto">
+            
+            <label for="nome">Nome do Usuário:</label>
+            <!-- Usamos disabled para o usuário não alterar o nome vindo do banco -->
+            <input type="text" id="nome" name="nome" readonly required>
+
+            <label for="email">E-mail de Contato:</label>
+            <input type="email" id="email" name="email" readonly required>
+
+            <label for="categoria">Categoria do Problema:</label>
+            <select id="categoria" name="categoria" required>
+                <option value="">Selecione uma opção...</option>
+                <option value="Sistemas / Software">Sistemas / Software</option>
+                <option value="Hardware / Computador">Hardware / Computador</option>
+                <option value="Internet / Rede">Internet / Rede</option>
+                <option value="Acessos / Senhas">Acessos / Senhas</option>
+                <option value="Outros">Outros</option>
+            </select>
+
+            <label for="prioridade">Prioridade:</label>
+            <select id="prioridade" name="prioridade" required>
+                <option value="Baixa">Baixa (Dúvidas ou melhorias)</option>
+                <option value="Média">Média (Atrapalha o trabalho, mas funciona)</option>
+                <option value="Alta">Alta (Trabalho totalmente interrompido)</option>
+            </select>
+
+
+<button onclick="gerarRelatorio()">Gerar Relatório de Hoje</button>
+            <label for="descricao">Descrição do Problema:</label>
+            <textarea id="descricao" name="descricao" rows="5" placeholder="Detalhe o que está acontecendo..." required></textarea>
+
+            <button type="submit" id="btnEnviar">Enviar Chamado</button>
+        </form>
+    </div>
+
+    <script>
+        // COLE AQUI A URL DO SEU GOOGLE SCRIPT DO NOVO DEPLOY
+        const URL_SCRIPT = 'https://script.google.com/macros/s/AKfycbx_d25vhCPitOzAsD16L1WI0YCe4v1js5tlvNVQofSDNbnisDiAQjvGe9FMCaM7GddZNQ/exec';
+
+        // Função que busca os dados na Planilha
+        function buscarUsuario() {
+            var idInput = document.getElementById('identificacao').value.trim();
+            if(!idInput) { alert('Por favor, digite sua identificação.'); return; }
+
+            document.getElementById('status-busca').style.display = 'block';
+
+            fetch(`${URL_SCRIPT}?busca=${idInput}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('status-busca').style.display = 'none';
+                if(data.encontrado) {
+                    // Preenche os campos ocultos do formulário
+                    document.getElementById('nome').value = data.nome;
+                    document.getElementById('email').value = data.email;
+                    
+                    // Mostra o formulário e esconde a busca
+                    document.getElementById('bloco-identificacao').classList.add('oculto');
+                    document.getElementById('meuFormulario').classList.remove('oculto');
+                } else {
+                    alert('Identificação não encontrada no banco de dados.');
+                }
+            })
+            .catch(err => {
+                document.getElementById('status-busca').style.display = 'none';
+                alert('Erro ao conectar ao banco de dados.');
+                console.error(err);
+            });
+        }
+
+        // Envio do formulário via POST
+        document.getElementById('meuFormulario').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var btn = document.getElementById('btnEnviar');
+            btn.disabled = true;
+            btn.innerText = 'Enviando chamado...';
+
+            var formData = new FormData(this);
+
+            fetch(URL_SCRIPT, {
+                method: 'POST',
+                body: formData,
+                mode: 'no-cors'
+            })
+            .then(() => {
+                alert('Chamado aberto com sucesso!');
+                // Retorna para a tela de identificação inicial
+                this.reset();
+                document.getElementById('meuFormulario').classList.add('oculto');
+                document.getElementById('identificacao').value = '';
+                document.getElementById('bloco-identificacao').classList.remove('oculto');
+            })
+            .catch(error => {
+                alert('Erro ao enviar.');
+                console.error(error);
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerText = 'Enviar Chamado';
+            });
+        });
+    </script>
+</body>
+</html>
