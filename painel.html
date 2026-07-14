@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Helpdesk - Avançado</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f8f9fa; margin: 20px; }
+        h2 { color: #333; margin-bottom: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        
+        /* Estilo dos Filtros e Pesquisa */
+        .filtros-container { display: flex; gap: 15px; margin-bottom: 20px; background: white; padding: 15px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); align-items: center; flex-wrap: wrap; }
+        .filtro-grupo { display: flex; flex-direction: column; gap: 5px; }
+        .filtro-grupo label { font-size: 12px; font-weight: bold; color: #666; text-transform: uppercase; }
+        .filtros-container input, .filtros-container select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; min-width: 200px; }
+        
+        /* Tabela e Badges */
+        table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 6px; overflow: hidden; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #0056b3; color: white; }
+        tr:hover { background-color: #f1f1f1; }
+        .badge { padding: 5px 10px; border-radius: 4px; font-weight: bold; font-size: 12px; }
+        .badge-alta { background-color: #ffcccc; color: #cc0000; }
+        .badge-media { background-color: #ffe6cc; color: #cc6600; }
+        .badge-baixa { background-color: #e6ffcc; color: #006600; }
+        .status-pendente { color: #d9534f; font-weight: bold; }
+        .status-resolvido { color: #5cb85c; font-weight: bold; }
+        .btn-baixa { background-color: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-baixa:hover { background-color: #218838; }
+        .loading { font-size: 18px; font-weight: bold; color: #666; text-align: center; margin-top: 40px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Painel de Gerenciamento - Helpdesk</h2>
+    
+    <!-- Seção de Filtros -->
+    <div class="filtros-container">
+        <div class="filtro-grupo">
+            <label for="pesquisa-nome">Buscar Usuário:</label>
+            <input type="text" id="pesquisa-nome" placeholder="Digite o nome..." oninput="filtrarChamados()">
+        </div>
+        
+        <div class="filtro-grupo">
+            <label for="filtro-status">Filtrar por Status:</label>
+            <select id="filtro-status" onchange="filtrarChamados()">
+                <option value="Todos">Todos os Chamados</option>
+                <option value="Pendente" selected>Apenas Pendentes</option>
+                <option value="Resolvido">Apenas Resolvidos</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="loading" class="loading">Buscando chamados ativos...</div>
+    
+    <table id="tabela-chamados" style="display: none;">
+        <thead>
+            <tr>
+                <th>Usuário</th>
+                <th>Categoria</th>
+                <th>Prioridade</th>
+                <th>Descrição</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="corpo-tabela">
+            <!-- Os chamados entrarão aqui dinamicamente -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // Cole aqui a URL gerada na implantação do seu Google Apps Script
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxkYPgg85b2i6eK-ddSQYG1agCkY-cZf9--2SgQC1-zZZta98drDPgwgTElNTqPxuvvzw/exec';
+    
+    // Variável global para armazenar a lista de chamados que vem da planilha
+    let todosOsChamados = [];
+
+    // Busca os dados da Planilha
+    async function carregarChamados() {
+        try {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('tabela-chamados').style.display = 'none';
+
+            const response = await fetch(SCRIPT_URL);
+            todosOsChamados = await response.json();
+            
+            // Renderiza na tela aplicando os filtros iniciais
+            filtrarChamados();
+
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('tabela-chamados').style.display = 'table';
+        } catch (error) {
+            document.getElementById('loading').innerText = 'Erro ao carregar chamados.';
+            console.error(error);
+        }
+    }
+
+    // Processa a pesquisa e os filtros sem precisar recarregar a página
+    function filtrarChamados() {
+        const termoPesquisa = document.getElementById('pesquisa-nome').value.toLowerCase();
+        const statusSelecionado = document.getElementById('filtro-status').value;
+        const corpoTabela = document.getElementById('corpo-tabela');
+        
+        corpoTabela.innerHTML = ''; // Limpa a tabela para reconstruir
+
+        todosOsChamados.forEach(chamado => {
+            // Verifica se o chamado bate com o filtro de texto e de status
+            const bateComNome = chamado.nome.toLowerCase().includes(termoPesquisa);
+            const bateComStatus = statusSelecionado === 'Todos' || chamado.status === statusSelecionado;
+
+            if (bateComNome && bateComStatus) {
+                const tr = document.createElement('tr');
+                
+                let classePrioridade = 'badge-baixa';
+                if(chamado.prioridade === 'Alta') classePrioridade = 'badge-alta';
+                if(chamado.prioridade === 'Média') classePrioridade = 'badge-media';
+
+                const ehPendente = chamado.status === 'Pendente';
+                const classeStatus = ehPendente ? 'status-pendente' : 'status-resolvido';
+                
+                const botaoAcao = ehPendente 
+                    ? `<button class="btn-baixa" onclick="darBaixa(${chamado.row})">Concluir</button>` 
+                    : `✅ Finalizado`;
+
+                tr.innerHTML = `
+                    <td><b>${chamado.nome}</b><br><small>${chamado.email}</small></td>
+                    <td>${chamado.categoria}</td>
+                    <td><span class="badge ${classePrioridade}">${chamado.prioridade}</span></td>
+                    <td>${chamado.descricao}</td>
+                    <td><span class="${classeStatus}">${chamado.status}</span></td>
+                    <td>${botaoAcao}</td>
+                `;
+                corpoTabela.appendChild(tr);
+            }
+        });
+    }
+
+    // Executa a baixa do chamado na planilha
+    async function darBaixa(linhaPlanilha) {
+        if (!confirm("Confirmar a conclusão deste chamado?")) return;
+
+        try {
+            await fetch(`${SCRIPT_URL}?action=updateStatus&row=${linhaPlanilha}`, {
+                method: 'POST'
+            });
+            
+            // Atualiza os dados locais para manter os filtros aplicados
+            await carregarChamados();
+        } catch (error) {
+            alert("Erro ao dar baixa no chamado.");
+            console.error(error);
+        }
+    }
+
+    // Inicializa o painel ao abrir a página
+    carregarChamados();
+</script>
+
+</body>
+</html>
