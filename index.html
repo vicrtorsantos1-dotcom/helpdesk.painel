@@ -19,16 +19,38 @@
         table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 6px; overflow: hidden; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
         th { background-color: #0056b3; color: white; }
-        tr:hover { background-color: #f1f1f1; }
+        tr.linha-chamado { cursor: pointer; }
+        tr.linha-chamado:hover { background-color: #f1f1f1; }
+        
         .badge { padding: 5px 10px; border-radius: 4px; font-weight: bold; font-size: 12px; }
         .badge-alta { background-color: #ffcccc; color: #cc0000; }
         .badge-media { background-color: #ffe6cc; color: #cc6600; }
         .badge-baixa { background-color: #e6ffcc; color: #006600; }
+        
         .status-pendente { color: #d9534f; font-weight: bold; }
+        .status-andamento { color: #f0ad4e; font-weight: bold; }
         .status-resolvido { color: #5cb85c; font-weight: bold; }
-        .btn-baixa { background-color: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .btn-baixa:hover { background-color: #218838; }
+        
+        .btn-acao { color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .btn-iniciar { background-color: #007bff; }
+        .btn-iniciar:hover { background-color: #0056b3; }
+        .btn-finalizar { background-color: #28a745; }
+        .btn-finalizar:hover { background-color: #218838; }
+        
         .loading { font-size: 18px; font-weight: bold; color: #666; text-align: center; margin-top: 40px; }
+
+        /* Estilos do Modal */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-conteudo { background: white; width: 90%; max-width: 600px; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); position: relative; max-height: 90vh; overflow-y: auto; }
+        .modal-fechar { position: absolute; top: 15px; right: 15px; font-size: 20px; font-weight: bold; color: #aaa; cursor: pointer; border: none; background: none; }
+        .modal-fechar:hover { color: #000; }
+        
+        .campo-detalhe { margin-bottom: 15px; }
+        .campo-detalhe label { font-size: 12px; font-weight: bold; color: #666; text-transform: uppercase; display: block; margin-bottom: 4px; }
+        .campo-detalhe p { font-size: 15px; color: #333; margin: 0; background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #eee; }
+        
+        textarea.campo-solucao { width: 100%; height: 100px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: Arial, sans-serif; resize: vertical; box-sizing: border-box; }
+        .modal-rodape { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
     </style>
 </head>
 <body>
@@ -48,6 +70,7 @@
             <select id="filtro-status" onchange="filtrarChamados()">
                 <option value="Todos">Todos os Chamados</option>
                 <option value="Pendente" selected>Apenas Pendentes</option>
+                <option value="Em Andamento">Em Andamento</option>
                 <option value="Resolvido">Apenas Resolvidos</option>
             </select>
         </div>
@@ -63,7 +86,6 @@
                 <th>Prioridade</th>
                 <th>Descrição</th>
                 <th>Status</th>
-                <th>Ações</th>
             </tr>
         </thead>
         <tbody id="corpo-tabela">
@@ -72,14 +94,55 @@
     </table>
 </div>
 
+<!-- Modal de Detalhes do Chamado -->
+<div id="modal-chamado" class="modal-overlay">
+    <div class="modal-conteudo">
+        <button class="modal-fechar" onclick="fecharModal()">&times;</button>
+        <h3 style="margin-top:0;" id="modal-titulo">Detalhes do Chamado</h3>
+        
+        <div class="campo-detalhe">
+            <label>Usuário</label>
+            <p id="modal-usuario">-</p>
+        </div>
+        
+        <div style="display: flex; gap: 15px;">
+            <div class="campo-detalhe" style="flex: 1;">
+                <label>Categoria</label>
+                <p id="modal-categoria">-</p>
+            </div>
+            <div class="campo-detalhe" style="flex: 1;">
+                <label>Prioridade</label>
+                <p id="modal-prioridade">-</p>
+            </div>
+            <div class="campo-detalhe" style="flex: 1;">
+                <label>Status</label>
+                <p id="modal-status">-</p>
+            </div>
+        </div>
+
+        <div class="campo-detalhe">
+            <label>Descrição do Problema</label>
+            <p id="modal-descricao">-</p>
+        </div>
+
+        <div class="campo-detalhe" id="container-solucao">
+            <label for="txt-solucao">Solução Técnica <span style="color:red">*</span></label>
+            <textarea id="txt-solucao" class="campo-solucao" placeholder="Descreva a solução aplicada obrigatoriamente antes de finalizar..."></textarea>
+        </div>
+
+        <div class="modal-rodape" id="modal-acoes">
+            <!-- Botões dinâmicos de acordo com o status -->
+        </div>
+    </div>
+</div>
+
 <script>
-    // Cole aqui a URL gerada na implantação do seu Google Apps Script
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxkYPgg85b2i6eK-ddSQYG1agCkY-cZf9--2SgQC1-zZZta98drDPgwgTElNTqPxuvvzw/exec';
     
-    // Variável global para armazenar a lista de chamados que vem da planilha
     let todosOsChamados = [];
+    let chamadoAtual = null;
 
-    // Busca os dados da Planilha
+    // Carrega chamados da planilha
     async function carregarChamados() {
         try {
             document.getElementById('loading').style.display = 'block';
@@ -88,7 +151,6 @@
             const response = await fetch(SCRIPT_URL);
             todosOsChamados = await response.json();
             
-            // Renderiza na tela aplicando os filtros iniciais
             filtrarChamados();
 
             document.getElementById('loading').style.display = 'none';
@@ -99,64 +161,116 @@
         }
     }
 
-    // Processa a pesquisa e os filtros sem precisar recarregar a página
+    // Filtra e renderiza a tabela
     function filtrarChamados() {
         const termoPesquisa = document.getElementById('pesquisa-nome').value.toLowerCase();
         const statusSelecionado = document.getElementById('filtro-status').value;
         const corpoTabela = document.getElementById('corpo-tabela');
         
-        corpoTabela.innerHTML = ''; // Limpa a tabela para reconstruir
+        corpoTabela.innerHTML = '';
 
         todosOsChamados.forEach(chamado => {
-            // Verifica se o chamado bate com o filtro de texto e de status
             const bateComNome = chamado.nome.toLowerCase().includes(termoPesquisa);
             const bateComStatus = statusSelecionado === 'Todos' || chamado.status === statusSelecionado;
 
             if (bateComNome && bateComStatus) {
                 const tr = document.createElement('tr');
+                tr.className = 'linha-chamado';
+                tr.onclick = () => abrirModal(chamado);
                 
                 let classePrioridade = 'badge-baixa';
                 if(chamado.prioridade === 'Alta') classePrioridade = 'badge-alta';
                 if(chamado.prioridade === 'Média') classePrioridade = 'badge-media';
 
-                const ehPendente = chamado.status === 'Pendente';
-                const classeStatus = ehPendente ? 'status-pendente' : 'status-resolvido';
-                
-                const botaoAcao = ehPendente 
-                    ? `<button class="btn-baixa" onclick="darBaixa(${chamado.row})">Concluir</button>` 
-                    : `✅ Finalizado`;
+                let classeStatus = 'status-pendente';
+                if(chamado.status === 'Em Andamento') classeStatus = 'status-andamento';
+                if(chamado.status === 'Resolvido') classeStatus = 'status-resolvido';
 
                 tr.innerHTML = `
                     <td><b>${chamado.nome}</b><br><small>${chamado.email}</small></td>
                     <td>${chamado.categoria}</td>
                     <td><span class="badge ${classePrioridade}">${chamado.prioridade}</span></td>
-                    <td>${chamado.descricao}</td>
-                    <td><span class="${classeStatus}">${chamado.status}</span></td>
-                    <td>${botaoAcao}</td>
+                    <td>${chamado.descricao.substring(0, 60)}${chamado.descricao.length > 60 ? '...' : ''}</td>
+                    <td><span class="${classeStatus}">${chamado.status || 'Pendente'}</span></td>
                 `;
                 corpoTabela.appendChild(tr);
             }
         });
     }
 
-    // Executa a baixa do chamado na planilha
-    async function darBaixa(linhaPlanilha) {
-        if (!confirm("Confirmar a conclusão deste chamado?")) return;
+    // Abre o Modal com os dados detalhados
+    function abrirModal(chamado) {
+        chamadoAtual = chamado;
+        document.getElementById('modal-usuario').innerHTML = `${chamado.nome} (${chamado.email})`;
+        document.getElementById('modal-categoria').innerText = chamado.categoria;
+        document.getElementById('modal-prioridade').innerText = chamado.prioridade;
+        document.getElementById('modal-status').innerText = chamado.status || 'Pendente';
+        document.getElementById('modal-descricao').innerText = chamado.descricao;
+        
+        const txtSolucao = document.getElementById('txt-solucao');
+        const containerSolucao = document.getElementById('container-solucao');
+        const containerAcoes = document.getElementById('modal-acoes');
+        
+        txtSolucao.value = chamado.solucao || '';
+        containerAcoes.innerHTML = '';
 
+        if (chamado.status === 'Resolvido') {
+            txtSolucao.readOnly = true;
+            containerSolucao.style.display = 'block';
+        } else if (chamado.status === 'Em Andamento') {
+            txtSolucao.readOnly = false;
+            containerSolucao.style.display = 'block';
+            containerAcoes.innerHTML = `<button class="btn-acao btn-finalizar" onclick="finalizarChamado()">Finalizar Chamado</button>`;
+        } else {
+            // Status Pendente ou não definido
+            containerSolucao.style.display = 'none';
+            containerAcoes.innerHTML = `<button class="btn-acao btn-iniciar" onclick="iniciarChamado()">Iniciar Chamado</button>`;
+        }
+
+        document.getElementById('modal-chamado').style.display = 'flex';
+    }
+
+    function fecharModal() {
+        document.getElementById('modal-chamado').style.display = 'none';
+        chamadoAtual = null;
+    }
+
+    // Iniciar chamado (altera status para 'Em Andamento')
+    async function iniciarChamado() {
         try {
-            await fetch(`${SCRIPT_URL}?action=updateStatus&row=${linhaPlanilha}`, {
+            await fetch(`${SCRIPT_URL}?action=updateStatus&row=${chamadoAtual.row}&status=Em Andamento`, {
                 method: 'POST'
             });
-            
-            // Atualiza os dados locais para manter os filtros aplicados
+            fecharModal();
             await carregarChamados();
         } catch (error) {
-            alert("Erro ao dar baixa no chamado.");
+            alert("Erro ao iniciar chamado.");
             console.error(error);
         }
     }
 
-    // Inicializa o painel ao abrir a página
+    // Finalizar chamado (valida solução obrigatória e altera para 'Resolvido')
+    async function finalizarChamado() {
+        const solucao = document.getElementById('txt-solucao').value.trim();
+
+        if (!solucao) {
+            alert("É obrigatório descrever a solução antes de finalizar o chamado!");
+            document.getElementById('txt-solucao').focus();
+            return;
+        }
+
+        try {
+            await fetch(`${SCRIPT_URL}?action=updateStatus&row=${chamadoAtual.row}&status=Resolvido&solucao=${encodeURIComponent(solucao)}`, {
+                method: 'POST'
+            });
+            fecharModal();
+            await carregarChamados();
+        } catch (error) {
+            alert("Erro ao finalizar chamado.");
+            console.error(error);
+        }
+    }
+
     carregarChamados();
 </script>
 
