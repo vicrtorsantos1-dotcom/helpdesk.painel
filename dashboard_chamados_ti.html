@@ -58,9 +58,12 @@ thead tr{border-bottom:2px solid var(--ink)}
 <header>
 <div>
 <h1>Central de Chamados de TI</h1>
-<div class="subtitle">Suporte técnico · 20/jul a 10/set/2026</div>
+<div class="subtitle">Suporte técnico · dados sincronizados com Google Sheets</div>
 </div>
-<button id="toggleInv">Incluir cadastro de inventário (+20)</button>
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+<button id="refreshBtn">Atualizar agora</button>
+<button id="toggleInv">Incluir cadastro de inventário</button>
+</div>
 </header>
 
 <section class="grid kpis">
@@ -88,95 +91,192 @@ thead tr{border-bottom:2px solid var(--ink)}
 </div></div>
 
 <div class="footer" id="footer"></div>
+<div class="footer" id="syncStatus">Carregando dados...</div>
 </div>
 
 <script>
-const RAW = [
-{ setor: "PCP", categoria: "Sistemas / Software", prioridade: "Alta", status: "Resolvido", abertura: "21/07/2026 10:43:12", dur: 19.5, inv: false },
-{ setor: "COMERCIAL02", categoria: "Sistemas / Software", prioridade: "Média", status: "Resolvido", abertura: "20/07/2026 10:42:12", dur: 67.8, inv: false },
-{ setor: "PCP", categoria: "Outros", prioridade: "Média", status: "Resolvido", abertura: "20/07/2026 08:01:52", dur: 80.3, inv: false },
-{ setor: "QUALIDADE02", categoria: "Outros", prioridade: "Alta", status: "Resolvido", abertura: "22/07/2026 09:13:09", dur: 79.0, inv: false },
-{ setor: "QUALIDADE02", categoria: "Sistemas / Software", prioridade: "Média", status: "Resolvido", abertura: "29/07/2026 13:24:30", dur: 116.1, inv: false },
-{ setor: "QUALIDADE02", categoria: "Sistemas / Software", prioridade: "Média", status: "Resolvido", abertura: "31/07/2026 10:23:09", dur: 2.1, inv: false },
-{ setor: "Emanuel Victor", categoria: "Hardware / Computador", prioridade: "Baixa", status: "Resolvido", abertura: "31/07/2026 10:53:29", dur: 226.2, inv: false },
-{ setor: "MANUTENCAO04", categoria: "Outros", prioridade: "Média", status: "Resolvido", abertura: "06/08/2026 11:20:40", dur: -45.8, inv: false },
-{ setor: "MANUTENCAO04", categoria: "Internet / Rede", prioridade: "Baixa", status: "Resolvido", abertura: "07/08/2026 14:25:20", dur: 50.3, inv: false },
-{ setor: "FABRICA02", categoria: "Sistemas / Software", prioridade: "Alta", status: "Resolvido", abertura: "10/08/2026 09:34:20", dur: 65.5, inv: false },
-{ setor: "ALMOXARIFADO", categoria: "Outros", prioridade: "Baixa", status: "Resolvido", abertura: "02/07/2026 09:10:15", dur: -10.0, inv: true },
-{ setor: "TREINAMENTO", categoria: "Outros", prioridade: "Baixa", status: "Resolvido", abertura: "02/07/2026 09:10:15", dur: 20.0, inv: true },
-{ setor: "PCP", categoria: "Outros", prioridade: "Baixa", status: "Resolvido", abertura: "02/07/2026 09:10:15", dur: 30.0, inv: true },
-{ setor: "QUALIDADE01", categoria: "Outros", prioridade: "Baixa", status: "Resolvido", abertura: "02/07/2026 09:10:15", dur: 40.0, inv: true },
-{ setor: "QUALIDADE02", categoria: "Outros", prioridade: "Baixa", status: "Resolvido", abertura: "02/07/2026 09:10:15", dur: 50.0, inv: true },
-{ setor: "LABORATORIO", categoria: "Outros", prioridade: "Baixa", status: "Resolvido", abertura: "02/07/2026 09:10:15", dur: 60.0, inv: true },
-{ setor: "MANUTENCAO04", categoria: "Outros", prioridade: "Baixa", status: "Resolvido", abertura: "02/07/2026 09:10:15", dur: 70.0, inv: true },
-{ setor: "FABRICA", categoria: "Outros", prioridade: "Baixa", status: "Resolvido", abertura: "02/07/2026 09:10:15", dur: 80.0, inv: true },
-{ setor: "ADMINISTRATIVO01", categoria: "Outros", prioridade: "Baixa", status: "Resolvido", abertura: "02/07/2026 09:10:15", dur: 90.0, inv: true },
-{ setor: "PRODUÇÃO", categoria: "Outros", prioridade: "Baixa", status: "Resolvido", abertura: "02/07/2026 09:10:15", dur: 100.0, inv: true },
-{ setor: "INDUSTRIA", categoria: "Outros", prioridade: "Baixa", status: "Resolvido", abertura: "02/07/2026 09:10:15", dur: 110.0, inv: true },
-{ setor: "FABRICA02", categoria: "Outros", prioridade: "Baixa", status: "Resolvido", abertura: "02/07/2026 09:10:15", dur: 120.0, inv: true },
-{ setor: "ENVASE", categoria: "Outros", prioridade: "Baixa", status: "Resolvido", abertura: "02/07/2026 09:10:15", dur: 130.0, inv: true },
-{ setor: "BALANCA01", categoria: "Outros", prioridade: "Baixa", status: "Resolvido", abertura: "02/07/2026 09:10:15", dur: 140.0, inv: true },
-{ setor: "AGRICOLA", categoria: "Outros", prioridade: "Baixa", status: "Resolvido", abertura: "02/07/2026 09:10:15", dur: 150.0, inv: true },
-{ setor: "COMERCIAL02", categoria: "Outros", prioridade: "Baixa", status: "Resolvido", abertura: "02/07/2026 09:10:15", dur: 160.0, inv: true },
-{ setor: "COMERCIAL", categoria: "Outros", prioridade: "Baixa", status: "Resolvido", abertura: "02/07/2026 09:10:15", dur: 170.0, inv: true },
-{ setor: "RH", categoria: "Outros", prioridade: "Baixa", status: "Resolvido", abertura: "02/07/2026 09:10:15", dur: 240.0, inv: true },
-{ setor: "ASSISTENTERH", categoria: "Outros", prioridade: "Baixa", status: "Resolvido", abertura: "02/07/2026 09:10:15", dur: 250.0, inv: true },
-{ setor: "RECEPCAO", categoria: "Outros", prioridade: "Baixa", status: "Resolvido", abertura: "02/07/2026 09:10:15", dur: 260.0, inv: true },
-{ setor: "MANUTENCAO04", categoria: "Sistemas / Software", prioridade: "Média", status: "Resolvido", abertura: "10/08/2026 15:23:10", dur: 1159.7, inv: false },
-{ setor: "COMERCIAL", categoria: "Outros", prioridade: "Alta", status: "Resolvido", abertura: "13/08/2026 08:49:58", dur: 31.9, inv: false },
-{ setor: "FABRICA02", categoria: "Sistemas / Software", prioridade: "Alta", status: "Resolvido", abertura: "17/08/2026 13:25:51", dur: 88.0, inv: false },
-{ setor: "TREINAMENTO", categoria: "Hardware / Computador", prioridade: "Média", status: "Resolvido", abertura: "24/08/2026 12:04:16", dur: -0.4, inv: false },
-{ setor: "Visitante", categoria: "Hardware / Computador", prioridade: "Alta", status: "Resolvido", abertura: "25/08/2026 14:25:16", dur: -0.2, inv: false },
-{ setor: "FABRICA", categoria: "Sistemas / Software", prioridade: "Média", status: "Resolvido", abertura: "31/08/2026 08:47:10", dur: 48.3, inv: false },
-{ setor: "FABRICA", categoria: "Sistemas / Software", prioridade: "Média", status: "Resolvido", abertura: "01/09/2026 09:05:07", dur: 45.6, inv: false },
-{ setor: "RH", categoria: "Sistemas / Software", prioridade: "Alta", status: "Resolvido", abertura: "01/09/2026 09:46:21", dur: 31.9, inv: false },
-{ setor: "COMERCIAL (Paulo)", categoria: "Sistemas / Software", prioridade: "Alta", status: "Resolvido", abertura: "02/09/2026 11:46:20", dur: 150.8, inv: false },
-{ setor: "BALANCA01", categoria: "Sistemas / Software", prioridade: "Baixa", status: "Resolvido", abertura: "02/09/2026 14:46:52", dur: 39.2, inv: false },
-{ setor: "BALANCA01", categoria: "Internet / Rede", prioridade: "Alta", status: "Resolvido", abertura: "08/09/2026 07:57:21", dur: 69.3, inv: false },
-{ setor: "BALANCA01", categoria: "Hardware / Computador", prioridade: "Média", status: "Resolvido", abertura: "08/09/2026 09:13:05", dur: -0.6, inv: false },
-{ setor: "AGRICOLA", categoria: "Hardware / Computador", prioridade: "Média", status: "Resolvido", abertura: "08/09/2026 09:13:05", dur: 0.3, inv: false },
-{ setor: "FABRICA02", categoria: "Hardware / Computador", prioridade: "Alta", status: "Resolvido", abertura: "08/09/2026 13:20:02", dur: 90.5, inv: false },
-{ setor: "QUALIDADE01", categoria: "Sistemas / Software", prioridade: "Média", status: "Resolvido", abertura: "08/09/2026 15:05:54", dur: 45.8, inv: false },
-{ setor: "RH", categoria: "Hardware / Computador", prioridade: "Média", status: "Em Andamento", abertura: "10/09/2026 07:32:05", dur: null, inv: false },
-{ setor: "FABRICA", categoria: "Hardware / Computador", prioridade: "Baixa", status: "Resolvido", abertura: "10/09/2026 11:51:49", dur: 203.0, inv: false },
-{ setor: "COMERCIAL (Vinicios)", categoria: "Sistemas / Software", prioridade: "Alta", status: "Resolvido", abertura: "10/09/2026 15:35:48", dur: 1.1, inv: false }
-];
 const COLORS = {Alta:"#C1440E", Média:"#C7821B", Baixa:"#3F8F63"};
 const CAT_COLORS = ["#0E7C86","#C1440E","#C7821B","#5C6773","#2461A6"];
 let incluirInventario = false;
 let charts = {};
+let carregando = false;
+
+function valueOf(obj, keys, fallback=""){
+  for(const key of keys){
+    if(obj && obj[key] !== undefined && obj[key] !== null && String(obj[key]).trim() !== ""){
+      return obj[key];
+    }
+  }
+  return fallback;
+}
 
 function parseDate(s){
-  const [d,t]=s.split(" "); const [dd,mm,yyyy]=d.split("/");
-  return new Date(`${yyyy}-${mm}-${dd}T${t}`);
+  if(!s) return null;
+  if(s instanceof Date) return isNaN(s) ? null : s;
+  const str = String(s).trim();
+
+  // dd/mm/yyyy hh:mm:ss
+  let m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if(m){
+    return new Date(
+      Number(m[3]), Number(m[2])-1, Number(m[1]),
+      Number(m[4]||0), Number(m[5]||0), Number(m[6]||0)
+    );
+  }
+
+  // yyyy-mm-dd ou ISO
+  const d = new Date(str);
+  return isNaN(d) ? null : d;
 }
+
+function formatDate(value){
+  const d = parseDate(value);
+  if(!d) return value ? String(value) : "—";
+  const dd = String(d.getDate()).padStart(2,"0");
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const yyyy = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2,"0");
+  const mi = String(d.getMinutes()).padStart(2,"0");
+  const ss = String(d.getSeconds()).padStart(2,"0");
+  return `${dd}/${mm}/${yyyy} ${hh}:${mi}:${ss}`;
+}
+
+function parseDuration(value, obj){
+  if(value !== undefined && value !== null && String(value).trim() !== ""){
+    if(typeof value === "number") return value;
+    const str = String(value).trim().replace(",", ".");
+    const n = Number(str);
+    if(!Number.isNaN(n)) return n;
+
+    const hm = str.match(/^(\d+(?:\.\d+)?)\s*h(?:oras?)?\s*(\d+)?\s*m?/i);
+    if(hm) return Number(hm[1])*60 + Number(hm[2]||0);
+
+    const min = str.match(/^(\d+(?:\.\d+)?)\s*(?:min|mins|minutos?)$/i);
+    if(min) return Number(min[1]);
+  }
+
+  // Se o Apps Script devolver início e fim, calcula automaticamente em minutos.
+  const inicio = valueOf(obj, ["inicio","dataInicio","horaInicio","abertura"]);
+  const fim = valueOf(obj, ["fim","dataFim","horaFim","encerramento","fechamento"]);
+  const di = parseDate(inicio);
+  const df = parseDate(fim);
+  if(di && df) return (df-di)/60000;
+
+  return null;
+}
+
+function normalizeRecord(obj, index){
+  const setor = valueOf(obj, [
+    "setor","Setor","sector","departamento","Departamento","area","área",
+    "unidade","local","nomeSetor","setorNome"
+  ], "Não informado");
+
+  const categoria = valueOf(obj, [
+    "categoria","Categoria","category","tipo","Tipo"
+  ], "Não informado");
+
+  const prioridade = valueOf(obj, [
+    "prioridade","Prioridade","priority"
+  ], "Não informado");
+
+  const status = valueOf(obj, [
+    "status","Status"
+  ], "Não informado");
+
+  const abertura = valueOf(obj, [
+    "abertura","Abertura","dataHora","data_hora","timestamp",
+    "data","Data","criadoEm","createdAt","inicio","dataAbertura"
+  ], "");
+
+  const durRaw = valueOf(obj, [
+    "dur","Dur","duracao","duração","duration","tempoAtendimento",
+    "tempo_atendimento","tempo"
+  ], null);
+
+  const invRaw = valueOf(obj, [
+    "inv","inventario","inventário","isInventario","cadastroInventario"
+  ], false);
+
+  const inv = invRaw === true || ["true","1","sim","yes","inventario","inventário"].includes(
+    String(invRaw).trim().toLowerCase()
+  );
+
+  return {
+    setor: String(setor),
+    categoria: String(categoria),
+    prioridade: String(prioridade),
+    status: String(status),
+    abertura: String(abertura),
+    dur: parseDuration(durRaw, obj),
+    inv,
+    row: valueOf(obj, ["row","linha","line"], index + 2),
+    nome: valueOf(obj, ["nome","Nome","usuario","usuário","user"], ""),
+    email: valueOf(obj, ["email","Email"], ""),
+    descricao: valueOf(obj, ["descricao","descrição","Descricao"], ""),
+    solucao: valueOf(obj, ["solucao","solução","Solucao"], "")
+  };
+}
+
 function fmtMin(min){
-  if(min==null) return "—";
+  if(min==null || Number.isNaN(min)) return "—";
   const h=Math.floor(min/60), m=Math.round(min%60);
   return h>0 ? `${h}h${String(m).padStart(2,"0")}` : `${m}min`;
 }
+
 function median(arr){
   if(!arr.length) return null;
   const a=[...arr].sort((x,y)=>x-y), n=a.length;
   return n%2 ? a[(n-1)/2] : (a[n/2-1]+a[n/2])/2;
 }
+
+function monthLabel(key){
+  const [y,m] = key.split("-").map(Number);
+  const names = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+  return `${names[m-1]}/${String(y).slice(-2)}`;
+}
+
 function calc(){
   const base=RAW.filter(d=>incluirInventario || !d.inv);
-  const resolved=base.filter(d=>d.status==="Resolvido").length;
-  const invalid=base.filter(d=>d.dur!=null && d.dur<0).length;
-  const valid=base.filter(d=>d.dur!=null && d.dur>=0).map(d=>d.dur);
-  const cat={}; base.forEach(d=>cat[d.categoria]=(cat[d.categoria]||0)+1);
-  const prio={Alta:0,Média:0,Baixa:0}; base.forEach(d=>prio[d.prioridade]=(prio[d.prioridade]||0)+1);
+  const resolved=base.filter(d=>String(d.status).trim().toLowerCase()==="resolvido").length;
+  const invalid=base.filter(d=>d.dur!=null && Number(d.dur)<0).length;
+  const valid=base.filter(d=>d.dur!=null && Number(d.dur)>=0).map(d=>Number(d.dur));
+
+  const cat={};
+  base.forEach(d=>cat[d.categoria]=(cat[d.categoria]||0)+1);
+
+  const prio={Alta:0,"Média":0,Baixa:0};
+  base.forEach(d=>{
+    const p = ["Alta","Média","Baixa"].includes(d.prioridade) ? d.prioridade : d.prioridade;
+    prio[p]=(prio[p]||0)+1;
+  });
+
   const time={Alta:[],Média:[],Baixa:[]};
-  base.forEach(d=>{if(d.dur!=null&&d.dur>=0&&time[d.prioridade])time[d.prioridade].push(d.dur)});
-  const sectors={}; base.forEach(d=>sectors[d.setor]=(sectors[d.setor]||0)+1);
-  const months={}; base.forEach(d=>{const dt=parseDate(d.abertura);const k=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}`;months[k]=(months[k]||0)+1});
-  const monthNames={"2026-07":"26/julho","2026-08":"26/ago","2026-09":"26/set"};
-  return {base,resolved,invalid,median:median(valid),cat,prio,time,sectors,months,monthNames};
+  base.forEach(d=>{
+    if(d.dur!=null && d.dur>=0 && time[d.prioridade]) time[d.prioridade].push(Number(d.dur));
+  });
+
+  const sectors={};
+  base.forEach(d=>sectors[d.setor]=(sectors[d.setor]||0)+1);
+
+  const months={};
+  base.forEach(d=>{
+    const dt=parseDate(d.abertura);
+    if(!dt) return;
+    const k=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}`;
+    months[k]=(months[k]||0)+1;
+  });
+
+  return {base,resolved,invalid,median:median(valid),cat,prio,time,sectors,months};
 }
-function destroyCharts(){Object.values(charts).forEach(c=>c.destroy());charts={}}
+
+function destroyCharts(){
+  Object.values(charts).forEach(c=>c.destroy());
+  charts={};
+}
+
 function render(){
   const s=calc(), total=s.base.length, andamento=total-s.resolved;
+
   document.getElementById("total").textContent=total;
   document.getElementById("resolvedSub").textContent=`${s.resolved} resolvidos`;
   document.getElementById("rate").textContent=total?Math.round(s.resolved/total*100)+"%":"0%";
@@ -185,53 +285,189 @@ function render(){
   document.getElementById("invalid").textContent=s.invalid;
 
   destroyCharts();
+
   const catEntries=Object.entries(s.cat).sort((a,b)=>b[1]-a[1]);
   charts.category=new Chart(document.getElementById("categoryChart"),{
-    type:"bar",data:{labels:catEntries.map(x=>x[0]),datasets:[{data:catEntries.map(x=>x[1]),backgroundColor:catEntries.map((_,i)=>CAT_COLORS[i%CAT_COLORS.length]),borderRadius:4}]},
-    options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{precision:0}},y:{grid:{display:false}}}}
+    type:"bar",
+    data:{
+      labels:catEntries.map(x=>x[0]),
+      datasets:[{
+        data:catEntries.map(x=>x[1]),
+        backgroundColor:catEntries.map((_,i)=>CAT_COLORS[i%CAT_COLORS.length]),
+        borderRadius:4
+      }]
+    },
+    options:{
+      indexAxis:"y",responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{beginAtZero:true,ticks:{precision:0}},y:{grid:{display:false}}}
+    }
   });
 
   const pLabels=["Alta","Média","Baixa"];
   charts.priority=new Chart(document.getElementById("priorityChart"),{
-    type:"doughnut",data:{labels:pLabels,datasets:[{data:pLabels.map(x=>s.prio[x]),backgroundColor:pLabels.map(x=>COLORS[x]),borderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:"58%",plugins:{legend:{display:false}}}
+    type:"doughnut",
+    data:{
+      labels:pLabels,
+      datasets:[{
+        data:pLabels.map(x=>s.prio[x]||0),
+        backgroundColor:pLabels.map(x=>COLORS[x]),
+        borderWidth:2
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,cutout:"58%",
+      plugins:{legend:{display:false}}
+    }
   });
-  document.getElementById("priorityLegend").innerHTML=pLabels.map(x=>`<div class="legend-item"><span class="dot" style="background:${COLORS[x]}"></span><span class="muted">${x}</span><b>${s.prio[x]}</b></div>`).join("");
+
+  document.getElementById("priorityLegend").innerHTML=pLabels.map(x=>
+    `<div class="legend-item"><span class="dot" style="background:${COLORS[x]}"></span><span class="muted">${x}</span><b>${s.prio[x]||0}</b></div>`
+  ).join("");
 
   const mEntries=Object.entries(s.months).sort((a,b)=>a[0].localeCompare(b[0]));
   charts.monthly=new Chart(document.getElementById("monthlyChart"),{
-    type:"line",data:{labels:mEntries.map(x=>s.monthNames[x[0]]||x[0]),datasets:[{data:mEntries.map(x=>x[1]),borderColor:"#0E7C86",backgroundColor:"#0E7C86",tension:.3,pointRadius:4}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}
+    type:"line",
+    data:{
+      labels:mEntries.map(x=>monthLabel(x[0])),
+      datasets:[{
+        data:mEntries.map(x=>x[1]),
+        borderColor:"#0E7C86",
+        backgroundColor:"#0E7C86",
+        tension:.3,
+        pointRadius:4
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,ticks:{precision:0}}}
+    }
   });
 
   charts.time=new Chart(document.getElementById("timePriorityChart"),{
-    type:"bar",data:{labels:pLabels,datasets:[{data:pLabels.map(x=>s.time[x].length?Math.round(s.time[x].reduce((a,b)=>a+b,0)/s.time[x].length):0),backgroundColor:pLabels.map(x=>COLORS[x]),borderRadius:4}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} min`}}},scales:{y:{beginAtZero:true}}}
+    type:"bar",
+    data:{
+      labels:pLabels,
+      datasets:[{
+        data:pLabels.map(x=>s.time[x].length?Math.round(s.time[x].reduce((a,b)=>a+b,0)/s.time[x].length):0),
+        backgroundColor:pLabels.map(x=>COLORS[x]),
+        borderRadius:4
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:c=>`${c.raw} min`}}
+      },
+      scales:{y:{beginAtZero:true}}
+    }
   });
 
   const sectorEntries=Object.entries(s.sectors).sort((a,b)=>b[1]-a[1]).slice(0,8);
   const max=sectorEntries[0]?.[1]||1;
-  document.getElementById("sectors").innerHTML=sectorEntries.map(([name,val])=>`<div class="sector"><div class="sector-name">${escapeHtml(name)}</div><div class="bar-bg"><div class="bar-fill" style="width:${val/max*100}%"></div></div><div class="sector-value">${val}</div></div>`).join("");
+  document.getElementById("sectors").innerHTML=sectorEntries.length
+    ? sectorEntries.map(([name,val])=>
+      `<div class="sector"><div class="sector-name">${escapeHtml(name)}</div><div class="bar-bg"><div class="bar-fill" style="width:${val/max*100}%"></div></div><div class="sector-value">${val}</div></div>`
+    ).join("")
+    : `<div class="muted">Nenhum chamado disponível.</div>`;
 
-  const tickets=[...s.base].sort((a,b)=>parseDate(b.abertura)-parseDate(a.abertura));
+  const tickets=[...s.base].sort((a,b)=>
+    (parseDate(b.abertura)?.getTime()||0)-(parseDate(a.abertura)?.getTime()||0)
+  );
+
   document.getElementById("tableTitle").textContent=`Chamados (${tickets.length})`;
+
   document.getElementById("tickets").innerHTML=tickets.map(t=>{
     const pc=COLORS[t.prioridade]||"#5C6773";
-    const sc=t.status==="Resolvido"?"#0E7C86":"#2461A6";
+    const sc=String(t.status).trim().toLowerCase()==="resolvido"?"#0E7C86":"#2461A6";
     const duration=t.dur==null?"—":t.dur<0?"dado inconsistente":fmtMin(t.dur);
-    return `<tr><td><b>${escapeHtml(t.setor)}</b></td><td class="muted">${escapeHtml(t.categoria)}</td><td><span class="pill" style="background:${pc}1A;color:${pc}">${escapeHtml(t.prioridade)}</span></td><td class="muted">${escapeHtml(t.abertura)}</td><td><span class="pill" style="background:${sc}1A;color:${sc}">${escapeHtml(t.status)}</span></td><td style="color:${t.dur!=null&&t.dur<0?"#C1440E":"#182029"};font-weight:600">${duration}</td></tr>`;
+
+    return `<tr>
+      <td><b>${escapeHtml(t.setor)}</b></td>
+      <td class="muted">${escapeHtml(t.categoria)}</td>
+      <td><span class="pill" style="background:${pc}1A;color:${pc}">${escapeHtml(t.prioridade)}</span></td>
+      <td class="muted">${escapeHtml(formatDate(t.abertura))}</td>
+      <td><span class="pill" style="background:${sc}1A;color:${sc}">${escapeHtml(t.status)}</span></td>
+      <td style="color:${t.dur!=null&&t.dur<0?"#C1440E":"#182029"};font-weight:600">${duration}</td>
+    </tr>`;
   }).join("");
-  document.getElementById("footer").innerHTML=`Dados extraídos de "chamados_-_Google_Planilhas.pdf". ${s.invalid} registro(s) apresentam data/hora de fim anterior à abertura (duração negativa na planilha original) — provavelmente falha de sincronismo do sistema — e foram excluídos dos cálculos de tempo médio/mediano, mas seguem listados na tabela.`;
+
+  const hasInv = RAW.some(d=>d.inv);
+  const invBtn = document.getElementById("toggleInv");
+  invBtn.style.display = hasInv ? "" : "none";
+
+  document.getElementById("footer").innerHTML =
+    `Fonte: Google Sheets via Google Apps Script. ${s.invalid} registro(s) apresentam duração negativa e foram excluídos dos cálculos de tempo médio/mediano, mas permanecem na tabela.`;
+
+  if(!RAW.length){
+    document.getElementById("footer").innerHTML += ` Nenhum chamado foi retornado pelo SCRIPT_URL.`;
+  }
 }
-function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+
+function escapeHtml(v){
+  return String(v ?? "").replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
+
+async function carregarDados(){
+  if(carregando) return;
+  carregando=true;
+
+  const statusEl=document.getElementById("syncStatus");
+  const btn=document.getElementById("refreshBtn");
+  btn.disabled=true;
+  btn.textContent="Atualizando...";
+  statusEl.textContent="Sincronizando com o Google Sheets...";
+
+  try{
+    const separator = SCRIPT_URL.includes("?") ? "&" : "?";
+    const response=await fetch(`${SCRIPT_URL}${separator}t=${Date.now()}`, {
+      method:"GET",
+      cache:"no-store"
+    });
+
+    if(!response.ok){
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data=await response.json();
+    if(!Array.isArray(data)){
+      throw new Error("O SCRIPT_URL não retornou uma lista de chamados.");
+    }
+
+    RAW=data.map(normalizeRecord);
+    render();
+
+    const agora=new Date();
+    statusEl.textContent=`Última sincronização: ${formatDate(agora)} · ${RAW.length} registro(s) recebidos.`;
+  }catch(error){
+    console.error("Erro ao carregar chamados:", error);
+    statusEl.innerHTML=`<span style="color:#C1440E;font-weight:600">Erro ao sincronizar:</span> ${escapeHtml(error.message)}. Verifique se o SCRIPT_URL está publicado como Web App e acessível pelo navegador.`;
+
+    if(!RAW.length) render();
+  }finally{
+    carregando=false;
+    btn.disabled=false;
+    btn.textContent="Atualizar agora";
+  }
+}
+
 document.getElementById("toggleInv").addEventListener("click",()=>{
   incluirInventario=!incluirInventario;
   const b=document.getElementById("toggleInv");
   b.classList.toggle("active",incluirInventario);
-  b.textContent=incluirInventario?"Ocultar cadastro de inventário":"Incluir cadastro de inventário (+20)";
+  b.textContent=incluirInventario ? "Ocultar cadastro de inventário" : "Incluir cadastro de inventário";
   render();
 });
-render();
+
+document.getElementById("refreshBtn").addEventListener("click",carregarDados);
+
+// Primeira carga e atualização automática a cada 30 segundos.
+carregarDados();
+setInterval(carregarDados, 30000);
 </script>
 </body>
 </html>
